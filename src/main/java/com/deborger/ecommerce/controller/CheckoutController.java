@@ -5,7 +5,7 @@ import com.deborger.ecommerce.dto.PurchaseResponse;
 import com.deborger.ecommerce.service.CheckoutService;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin
+// @CrossOrigin
 @RestController
 @RequestMapping("/api/checkout")
 public class CheckoutController {

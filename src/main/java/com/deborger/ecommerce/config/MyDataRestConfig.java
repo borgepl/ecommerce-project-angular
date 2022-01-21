@@ -5,6 +5,7 @@ import com.deborger.ecommerce.entity.Product;
 import com.deborger.ecommerce.entity.ProductCategory;
 import com.deborger.ecommerce.entity.State;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
@@ -21,6 +22,9 @@ import java.util.Set;
 @Configuration
 public class MyDataRestConfig implements RepositoryRestConfigurer {
 
+    @Value("${allowed.origins}")
+    private String[] theAllowedOrigins;
+
     private final EntityManager entityManager;
 
     public MyDataRestConfig(EntityManager entityManager) {
@@ -30,7 +34,7 @@ public class MyDataRestConfig implements RepositoryRestConfigurer {
     @Override
     public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config, CorsRegistry cors) {
 
-        HttpMethod[] unsupportedActions = {HttpMethod.PUT, HttpMethod.POST, HttpMethod.DELETE};
+        HttpMethod[] unsupportedActions = {HttpMethod.PUT, HttpMethod.POST, HttpMethod.DELETE, HttpMethod.PATCH};
 
         // call the internal helper method to disable the methods for Product, ProductCategory, Country, State
         disableHttpMethods(Product.class, config, unsupportedActions);
@@ -40,6 +44,10 @@ public class MyDataRestConfig implements RepositoryRestConfigurer {
 
         // call an internal helper method to expose the ids
         exposeIds(config);
+
+        // configure cors mapping
+        // cors.addMapping("/api/**").allowedOrigins("http://localhost:4200");
+        cors.addMapping(config.getBasePath() + "/**").allowedOrigins(theAllowedOrigins);
     }
 
     private void disableHttpMethods(Class theClass,RepositoryRestConfiguration config, HttpMethod[] unsupportedActions) {
