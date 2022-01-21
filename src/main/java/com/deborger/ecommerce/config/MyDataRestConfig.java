@@ -1,9 +1,6 @@
 package com.deborger.ecommerce.config;
 
-import com.deborger.ecommerce.entity.Country;
-import com.deborger.ecommerce.entity.Product;
-import com.deborger.ecommerce.entity.ProductCategory;
-import com.deborger.ecommerce.entity.State;
+import com.deborger.ecommerce.entity.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -41,6 +38,7 @@ public class MyDataRestConfig implements RepositoryRestConfigurer {
         disableHttpMethods(ProductCategory.class, config, unsupportedActions);
         disableHttpMethods(Country.class, config, unsupportedActions);
         disableHttpMethods(State.class, config, unsupportedActions);
+        disableHttpMethods(Order.class, config, unsupportedActions);
 
         // call an internal helper method to expose the ids
         exposeIds(config);
