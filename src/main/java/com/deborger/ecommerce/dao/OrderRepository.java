@@ -13,4 +13,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // @Query("select o from Order o where o.customer.email = :email")
     Page<Order> findByCustomerEmail(@Param("email") String email, Pageable pageable);
+
+    Page<Order> findByCustomerEmailOrderByDateCreatedDesc(@Param("email") String email, Pageable pageable);
 }
