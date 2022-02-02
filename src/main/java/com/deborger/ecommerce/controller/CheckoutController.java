@@ -1,9 +1,9 @@
 package com.deborger.ecommerce.controller;
 
-import com.deborger.ecommerce.dto.PaymentInfo;
-import com.deborger.ecommerce.dto.Purchase;
-import com.deborger.ecommerce.dto.PurchaseResponse;
+import com.MultiSafepay.client.MultiSafepayClient;
+import com.deborger.ecommerce.dto.*;
 import com.deborger.ecommerce.service.CheckoutService;
+import com.google.gson.JsonObject;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import org.springframework.http.HttpStatus;
@@ -25,6 +25,11 @@ public class CheckoutController {
         this.checkoutService = checkoutService;
     }
 
+    @GetMapping("/uuid")
+    public PurchaseResponse generateOrderTrackingNumber() {
+        return new PurchaseResponse(checkoutService.generateOrderTrackingNumber());
+    }
+
     @PostMapping("/purchase")
     public PurchaseResponse placeOrder(@RequestBody Purchase purchase) {
 
@@ -41,6 +46,32 @@ public class CheckoutController {
         String paymentStr = paymentIntent.toJson();
 
         return new ResponseEntity<>(paymentStr, HttpStatus.OK);
+    }
+
+    @PostMapping("/payment-order")
+    public PaymentResult createPaymentOrder(@RequestBody PaymentOrder paymentOrder) {
+
+        logger.info("Payment amount : " + paymentOrder.getAmount());
+        logger.info("Payment currency : " + paymentOrder.getCurrency());
+
+        JsonObject jsonResponse = checkoutService.createPaymentOrder(paymentOrder);
+
+        // extract data from jsonResponse
+        String jsonStr = jsonResponse.toString();
+        boolean success = jsonResponse.get("success").getAsBoolean();
+        JsonObject data = jsonResponse.get("data").getAsJsonObject();
+        String payment_OrderId = data.get("order_id").toString();
+        String payment_url = data.get("payment_url").toString();
+        String session_id = data.get("session_id").toString();
+        String qr_url = MultiSafepayClient.getQrUrl(jsonResponse);
+
+        // create PaymentResult
+        PaymentResult paymentResult = new PaymentResult(success,payment_OrderId,payment_url, qr_url, session_id);
+
+        logger.info("JsonRespone : " + jsonStr);
+        logger.info("Payment Order created : " + success + " " + payment_OrderId + " " + qr_url);
+
+        return paymentResult;
     }
 
 }

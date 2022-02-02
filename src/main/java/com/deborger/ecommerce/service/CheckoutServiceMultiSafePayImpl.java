@@ -1,5 +1,8 @@
 package com.deborger.ecommerce.service;
 
+import com.MultiSafepay.classes.GatewayInfo;
+import com.MultiSafepay.classes.PaymentOptions;
+import com.MultiSafepay.client.MultiSafepayClient;
 import com.deborger.ecommerce.dao.CustomerRepository;
 import com.deborger.ecommerce.dto.PaymentInfo;
 import com.deborger.ecommerce.dto.PaymentOrder;
@@ -12,7 +15,6 @@ import com.google.gson.JsonObject;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -20,18 +22,18 @@ import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.util.*;
 
-@Profile("stripe")
+@Profile("multisafepay")
 @Service
-public class CheckoutServiceImpl implements CheckoutService {
+public class CheckoutServiceMultiSafePayImpl implements CheckoutService {
 
     private final CustomerRepository customerRepository;
 
-    public CheckoutServiceImpl(CustomerRepository customerRepository, @Value("${stripe.key.secret}") String secretKey) {
+    public CheckoutServiceMultiSafePayImpl(CustomerRepository customerRepository, @Value("${api.key.secret}") String secretKey) {
 
         this.customerRepository = customerRepository;
 
-        // initialize the Stripe API with the secretKey
-        Stripe.apiKey = secretKey;
+        // initialize the MultiSafePay
+        MultiSafepayClient.init(true, secretKey);
     }
 
     @Override
@@ -41,8 +43,8 @@ public class CheckoutServiceImpl implements CheckoutService {
         // retrieve the order info from dto
         Order order = purchase.getOrder();
 
-        // generate tracking number
-        String orderTrackingNumber = generateOrderTrackingNumber();
+        // retrieve order_id - create with the paymentOrder
+        String orderTrackingNumber = purchase.getOrder_id();
         order.setOrderTrackingNumber(orderTrackingNumber);
 
         // populate order with orderItems
@@ -73,22 +75,44 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     @Override
     public PaymentIntent createPaymentIntent(PaymentInfo paymentInfo) throws StripeException {
-        List<String> paymentMethodTypes = new ArrayList<>();
-        paymentMethodTypes.add("card");
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("amount", paymentInfo.getAmount());
-        params.put("currency", paymentInfo.getCurrency());
-        params.put("payment_method_types",paymentMethodTypes);
-        params.put("description","MyShop Purchase");
-        params.put("receipt_email",paymentInfo.getReceiptEmail());
-
-        return PaymentIntent.create(params);
+        return null;
     }
 
-    @Override
     public JsonObject createPaymentOrder(PaymentOrder paymentOrder) {
-        return null;
+
+        java.util.Date date = new java.util.Date();
+        String tempOrderId = Long.toString(date.getTime());
+
+        com.MultiSafepay.classes.Order order = new com.MultiSafepay.classes.Order();
+        paymentOrder.setOrder_id(generateOrderTrackingNumber());
+        order.setRedirect(paymentOrder.getOrder_id(), paymentOrder.getDescription(),
+                paymentOrder.getAmount(), paymentOrder.getCurrency(), new PaymentOptions("http://example.com/notify",
+                        "https://localhost:4200/failed",
+                        "https://localhost:4200/success"));
+
+        order.customer = new com.MultiSafepay.classes.Customer();
+
+//        order.customer.first_name = "John";
+//        order.customer.last_name = "Doe";
+//        order.customer.address1 = "Kraanspoor 39";
+//        order.customer.zip_code = "1033SC";
+//        order.customer.city = "Amsterdam";
+//        order.customer.country = "NL";
+
+        order.customer.first_name = paymentOrder.getCust_firstName();
+        order.customer.last_name = paymentOrder.getCust_lastName();
+        order.customer.address1 = paymentOrder.getCust_address1();
+        order.customer.zip_code = paymentOrder.getCust_zipCode();
+        order.customer.city = paymentOrder.getCust_city();
+        order.customer.country = paymentOrder.getCust_country();
+
+        //order.gateway = "MISTERCASH";
+        order.gateway = paymentOrder.getGateway();
+        order.gateway_info = new GatewayInfo();
+        order.gateway_info.qr_size = 300;
+        order.gateway_info.qr_enabled = 1;
+
+        return MultiSafepayClient.createOrder(order);
     }
 
     @Override
